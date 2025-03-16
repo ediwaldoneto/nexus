@@ -12,9 +12,13 @@ export const useApi = () => {
       setLoading(false);
       return response.data;
     } catch (err) {
-      setError(err.message);
       setLoading(false);
-      throw err;
+      if (err.response && err.response.status === 409) {
+        const errorMessage = err.response.data.detail || 'Erro ao cadastrar: dados já existem.';
+        throw new Error(errorMessage); // Lança o erro com a mensagem do detail
+      }
+      setError(err.message);
+      throw err; // Outros erros genéricos
     }
   };
 
@@ -37,15 +41,15 @@ export const useApi = () => {
       const params = {
         page,
         size,
-        sort: 'name,asc', // Sempre ordenado por nome em ordem ascendente
+        sort: 'name,asc',
       };
       if (query) {
-        params.name = query; // Adiciona o parâmetro name apenas se houver query
+        params.name = query;
       }
       const endpoint = query ? '/api/v1/beneficiaries/search' : '/api/v1/beneficiaries';
       const response = await api.getBeneficiarios(endpoint, params);
       setLoading(false);
-      return response.data; // Espera-se { content: [], totalElements: number }
+      return response.data;
     } catch (err) {
       setError(err.message);
       setLoading(false);

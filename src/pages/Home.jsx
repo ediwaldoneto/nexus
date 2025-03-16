@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Tab, Box, Typography, Button, Grid, Snackbar, Alert, Divider, Dialog, DialogTitle, DialogContent, TextField } from '@mui/material';
+import { Tabs, Tab, Box, Typography, Button, Grid, Snackbar, Alert, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
 import BeneficiarioForm from '../components/BeneficiarioForm';
 import BeneficiarioList from '../components/BeneficiarioList';
 import DependenteForm from '../components/DependenteForm';
@@ -35,10 +35,12 @@ const Home = () => {
   const [selectedBeneficiarioId, setSelectedBeneficiarioId] = useState(null);
   const [selectedBeneficiario, setSelectedBeneficiario] = useState(null);
   const [selectedDependente, setSelectedDependente] = useState(null);
-  const [page, setPage] = useState(0); // Índice da API (0-based)
+  const [page, setPage] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [totalCount, setTotalCount] = useState(0);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null); // Mensagem de erro
+  const [openErrorDialog, setOpenErrorDialog] = useState(false); // Controla o Dialog de erro
   const [currentDateTime, setCurrentDateTime] = useState(getCurrentDateTime());
   const [openDialog, setOpenDialog] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -54,7 +56,7 @@ const Home = () => {
   const fetchPage = async (pageNumber, query) => {
     try {
       const response = await getBeneficiarios(query, pageNumber, size);
-      console.log('API Response:', response); // Para depuração
+      console.log('API Response:', response);
       const results = Array.isArray(response?.content) ? response.content : [];
       const total = Number(response?.totalElements) || 0;
       setBeneficiarios(results);
@@ -70,15 +72,15 @@ const Home = () => {
 
   const handleSearch = (query) => {
     setSearchQuery(query);
-    setPage(0); // Reseta para página 0 da API
+    setPage(0);
     fetchPage(0, query);
   };
 
   const handlePageChange = (newPage) => {
-    const apiPage = newPage - 1; // Converte de 1-based (Pagination) para 0-based (API)
+    const apiPage = newPage - 1;
     setPage(apiPage);
     if (hasSearched) {
-      fetchPage(apiPage, searchQuery); // Busca a página correta
+      fetchPage(apiPage, searchQuery);
     }
   };
 
@@ -98,9 +100,13 @@ const Home = () => {
       setBeneficiarios([...beneficiarios, { ...newBeneficiario, dependents: newBeneficiario.dependents || [] }]);
       setSelectedBeneficiarioId(newBeneficiario.id);
       setSuccessMessage('Beneficiário cadastrado com sucesso!');
+      setErrorMessage(null);
+      setOpenErrorDialog(false); // Fecha o Dialog em caso de sucesso
       return true;
     } catch (err) {
       console.error('Erro ao cadastrar beneficiário:', err);
+      setErrorMessage(err.message); // Define a mensagem de erro
+      setOpenErrorDialog(true); // Abre o Dialog de erro
       return false;
     }
   };
@@ -111,9 +117,13 @@ const Home = () => {
       await createDependente(beneficiarioId, dependenteData);
       fetchPage(page, searchQuery);
       setSuccessMessage('Dependente cadastrado com sucesso!');
+      setErrorMessage(null);
+      setOpenErrorDialog(false);
       return true;
     } catch (err) {
       console.error('Erro ao cadastrar dependente:', err);
+      setErrorMessage(err.message);
+      setOpenErrorDialog(true);
       return false;
     }
   };
@@ -123,9 +133,13 @@ const Home = () => {
       await createDependente(beneficiarioId, dependenteData);
       fetchPage(page, searchQuery);
       setSuccessMessage('Dependente cadastrado com sucesso!');
+      setErrorMessage(null);
+      setOpenErrorDialog(false);
       return true;
     } catch (err) {
       console.error('Erro ao cadastrar dependente:', err);
+      setErrorMessage(err.message);
+      setOpenErrorDialog(true);
       return false;
     }
   };
@@ -151,6 +165,11 @@ const Home = () => {
     setSuccessMessage(null);
   };
 
+  const handleCloseErrorDialog = () => {
+    setOpenErrorDialog(false);
+    setErrorMessage(null); // Limpa a mensagem ao fechar
+  };
+
   const handleBack = () => {
     setSelectedTab(0);
     setSelectedBeneficiario(null);
@@ -161,6 +180,8 @@ const Home = () => {
     setBeneficiarios([]);
     setTotalCount(0);
     setSuccessMessage(null);
+    setErrorMessage(null);
+    setOpenErrorDialog(false);
   };
 
   const handleCloseDialog = () => {
@@ -260,7 +281,7 @@ const Home = () => {
               {hasSearched && (
                 <BeneficiarioList
                   beneficiarios={beneficiarios}
-                  page={page + 1} // Passa page como 1-based para o componente Pagination
+                  page={page + 1}
                   setPage={handlePageChange}
                   size={size}
                   totalCount={totalCount}
@@ -466,6 +487,24 @@ const Home = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Dialog para mensagens de erro */}
+      <Dialog open={openErrorDialog} onClose={handleCloseErrorDialog} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ backgroundColor: '#d32f2f', color: 'white' }}>
+          Erro ao Cadastrar
+        </DialogTitle>
+        <DialogContent sx={{ padding: 3 }}>
+          <Typography variant="body1" align="center" color="error">
+            {errorMessage || 'Erro desconhecido ao cadastrar.'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseErrorDialog} variant="contained" color="primary">
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para mensagens de sucesso */}
       <Snackbar
         open={!!successMessage}
         autoHideDuration={3000}
