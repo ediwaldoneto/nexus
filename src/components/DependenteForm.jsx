@@ -55,7 +55,7 @@ const DependenteForm = ({
           rg: '',
           birthDate: '',
           needs: '',
-          beneficiarioId: selectedBeneficiarioId || '', // Mantém o beneficiarioId pré-selecionado
+          beneficiarioId: selectedBeneficiarioId || '',
         });
       }
     } else {
@@ -67,13 +67,12 @@ const DependenteForm = ({
           rg: '',
           birthDate: '',
           needs: '',
-          beneficiarioId: '', // Limpa o beneficiarioId
+          beneficiarioId: '',
         });
       }
     }
   };
 
-  // Opção padrão para o Autocomplete (baseada no selectedBeneficiarioId)
   const defaultBeneficiario = beneficiarios.find(b => b.id === selectedBeneficiarioId) || null;
 
   return (
@@ -243,9 +242,9 @@ const DependenteForm = ({
             type="submit"
             size="small"
             disabled={
-              !hasBeneficiarios || // Desabilita se não houver beneficiários
-              (!selectedBeneficiarioId && !beneficiarioIdValue) || // Desabilita se não houver beneficiário selecionado
-              !nameValue // Desabilita se o nome não estiver preenchido
+              !hasBeneficiarios ||
+              (!selectedBeneficiarioId && !beneficiarioIdValue) ||
+              !nameValue
             }
           >
             CADASTRAR DEPENDENTE

@@ -11,20 +11,17 @@ import {
 
 const BeneficiarioList = ({
   beneficiarios,
-  page,
+  page, // Agora é 1-based (1, 2, 3...)
   setPage,
-  itemsPerPage,
+  size,
+  totalCount,
   onSelectBeneficiario,
 }) => {
   const handlePageChange = (event, value) => {
-    setPage(value);
+    setPage(value); // value é 1-based, handlePageChange converte para 0-based
   };
 
-  const startIndex = (page - 1) * itemsPerPage;
-  const paginatedBeneficiarios = beneficiarios.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const pageCount = Math.ceil(totalCount / size);
 
   return (
     <Box sx={{ padding: 2 }}>
@@ -35,7 +32,7 @@ const BeneficiarioList = ({
       ) : (
         <>
           <Grid container spacing={2}>
-            {paginatedBeneficiarios.map((beneficiario) => (
+            {beneficiarios.map((beneficiario) => (
               <Grid item xs={12} sm={6} md={4} key={beneficiario.id}>
                 <Card
                   sx={{
@@ -76,8 +73,8 @@ const BeneficiarioList = ({
 
           <Box sx={{ display: 'flex', justifyContent: 'center', marginTop: 3 }}>
             <Pagination
-              count={Math.ceil(beneficiarios.length / itemsPerPage)}
-              page={page}
+              count={pageCount}
+              page={page} // 1-based
               onChange={handlePageChange}
               color="primary"
               sx={{

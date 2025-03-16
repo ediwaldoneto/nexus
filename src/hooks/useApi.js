@@ -31,12 +31,21 @@ export const useApi = () => {
     }
   };
 
-  const getBeneficiarios = async () => {
+  const getBeneficiarios = async (query = '', page = 0, size = 10) => {
     setLoading(true);
     try {
-      const response = await api.getBeneficiarios();
+      const params = {
+        page,
+        size,
+        sort: 'name,asc', // Sempre ordenado por nome em ordem ascendente
+      };
+      if (query) {
+        params.name = query; // Adiciona o parâmetro name apenas se houver query
+      }
+      const endpoint = query ? '/api/v1/beneficiaries/search' : '/api/v1/beneficiaries';
+      const response = await api.getBeneficiarios(endpoint, params);
       setLoading(false);
-      return response.data;
+      return response.data; // Espera-se { content: [], totalElements: number }
     } catch (err) {
       setError(err.message);
       setLoading(false);

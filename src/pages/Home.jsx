@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Tab, Box, Typography, Button, Grid, Snackbar, Alert, Divider, Dialog, DialogTitle, DialogContent } from '@mui/material';
+import { Tabs, Tab, Box, Typography, Button, Grid, Snackbar, Alert, Divider, Dialog, DialogTitle, DialogContent, TextField } from '@mui/material';
 import BeneficiarioForm from '../components/BeneficiarioForm';
 import BeneficiarioList from '../components/BeneficiarioList';
 import DependenteForm from '../components/DependenteForm';
@@ -35,11 +35,14 @@ const Home = () => {
   const [selectedBeneficiarioId, setSelectedBeneficiarioId] = useState(null);
   const [selectedBeneficiario, setSelectedBeneficiario] = useState(null);
   const [selectedDependente, setSelectedDependente] = useState(null);
-  const [showList, setShowList] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0); // Índice da API (0-based)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
   const [successMessage, setSuccessMessage] = useState(null);
   const [currentDateTime, setCurrentDateTime] = useState(getCurrentDateTime());
   const [openDialog, setOpenDialog] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const size = 10;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -48,21 +51,44 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchBeneficiarios = async () => {
+  const fetchPage = async (pageNumber, query) => {
     try {
-      const data = await getBeneficiarios();
-      setBeneficiarios(data || []);
-      setShowList(true);
-      setPage(1);
+      const response = await getBeneficiarios(query, pageNumber, size);
+      console.log('API Response:', response); // Para depuração
+      const results = Array.isArray(response?.content) ? response.content : [];
+      const total = Number(response?.totalElements) || 0;
+      setBeneficiarios(results);
+      setTotalCount(total);
+      setHasSearched(true);
     } catch (err) {
       console.error('Erro ao buscar beneficiários:', err);
+      setBeneficiarios([]);
+      setTotalCount(0);
+      setHasSearched(true);
+    }
+  };
+
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    setPage(0); // Reseta para página 0 da API
+    fetchPage(0, query);
+  };
+
+  const handlePageChange = (newPage) => {
+    const apiPage = newPage - 1; // Converte de 1-based (Pagination) para 0-based (API)
+    setPage(apiPage);
+    if (hasSearched) {
+      fetchPage(apiPage, searchQuery); // Busca a página correta
     }
   };
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
-    if (newValue === 2 && beneficiarios.length === 0) {
-      fetchBeneficiarios();
+    if (newValue === 0) {
+      setHasSearched(false);
+      setBeneficiarios([]);
+      setTotalCount(0);
+      setPage(0);
     }
   };
 
@@ -72,10 +98,10 @@ const Home = () => {
       setBeneficiarios([...beneficiarios, { ...newBeneficiario, dependents: newBeneficiario.dependents || [] }]);
       setSelectedBeneficiarioId(newBeneficiario.id);
       setSuccessMessage('Beneficiário cadastrado com sucesso!');
-      return true; // Retorna true para indicar sucesso
+      return true;
     } catch (err) {
       console.error('Erro ao cadastrar beneficiário:', err);
-      return false; // Retorna false em caso de erro
+      return false;
     }
   };
 
@@ -83,7 +109,7 @@ const Home = () => {
     if (!beneficiarioId) return false;
     try {
       await createDependente(beneficiarioId, dependenteData);
-      fetchBeneficiarios();
+      fetchPage(page, searchQuery);
       setSuccessMessage('Dependente cadastrado com sucesso!');
       return true;
     } catch (err) {
@@ -95,12 +121,12 @@ const Home = () => {
   const handleDependenteSubmitFromList = async (dependenteData, beneficiarioId) => {
     try {
       await createDependente(beneficiarioId, dependenteData);
-      fetchBeneficiarios();
+      fetchPage(page, searchQuery);
       setSuccessMessage('Dependente cadastrado com sucesso!');
-      return true; // Retorna true para indicar sucesso
+      return true;
     } catch (err) {
       console.error('Erro ao cadastrar dependente:', err);
-      return false; // Retorna false em caso de erro
+      return false;
     }
   };
 
@@ -126,12 +152,14 @@ const Home = () => {
   };
 
   const handleBack = () => {
-    setSelectedTab(0); // Volta para a aba "Listar"
+    setSelectedTab(0);
     setSelectedBeneficiario(null);
     setSelectedBeneficiarioId(null);
     setSelectedDependente(null);
-    setShowList(false);
-    setPage(1);
+    setPage(0);
+    setHasSearched(false);
+    setBeneficiarios([]);
+    setTotalCount(0);
     setSuccessMessage(null);
   };
 
@@ -169,7 +197,7 @@ const Home = () => {
         centered
         sx={{ backgroundColor: '#E0E0E0', borderBottom: '1px solid #D3D3D3' }}
       >
-        <Tab label="Listar" />
+        <Tab label="Buscar" />
         <Tab label="Cadastrar Beneficiário" />
         <Tab label="Cadastrar Dependente" />
       </Tabs>
@@ -209,22 +237,33 @@ const Home = () => {
         >
           {selectedTab === 0 && (
             <Box sx={{ textAlign: 'center' }}>
+              <TextField
+                label="Buscar por nome (começa com)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Digite o início do nome"
+                helperText="Deixe em branco para listar todos os beneficiários."
+                fullWidth
+                size="small"
+                sx={{ marginRight: 1 }}
+              />
               <Button
                 variant="contained"
                 color="primary"
-                onClick={fetchBeneficiarios}
+                onClick={() => handleSearch(searchQuery)}
                 disabled={loading}
-                sx={{ marginBottom: 1 }}
+                sx={{ marginTop: 1, marginBottom: 1 }}
               >
-                {loading ? 'Carregando...' : 'Listar Todos'}
+                {loading ? 'Carregando...' : 'Buscar'}
               </Button>
               {error && <Typography color="error">Erro: {error}</Typography>}
-              {showList && (
+              {hasSearched && (
                 <BeneficiarioList
                   beneficiarios={beneficiarios}
-                  page={page}
-                  setPage={setPage}
-                  itemsPerPage={10}
+                  page={page + 1} // Passa page como 1-based para o componente Pagination
+                  setPage={handlePageChange}
+                  size={size}
+                  totalCount={totalCount}
                   onSelectBeneficiario={handleSelectBeneficiario}
                 />
               )}
